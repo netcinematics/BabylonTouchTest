@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="utf-8"/>
+    <title>touch-test</title>
+    <!-- TEST: PEP or HAND -->
+    <script src="https://code.jquery.com/pep/0.4.2/pep.min.js"></script>
+    <!-- <script src="../../../lib/babylon/pep.min.js"></script> -->
+    <!-- <script src="../../../lib/babylon/hand.min-1.2.js"></script> -->
+    <!-- <script src="../../../lib/babylon/babylon_v3.1.js"></script> -->
+    <!-- <script src="../../../lib/babylon/babylon.3.2.0_preview.js"></script> -->
+    <script src="https://cdn.babylonjs.com/babylon.max.js"></script>
+    <!-- <script src="https://cdn.babylonjs.com/babylon.js"></script> -->
+    <!-- <script src="../../../lib/babylon/babylon_v3.2.0_alpha1.js"></script>  -->
+
+    <style>
+        html, body {
+            overflow: hidden;
+            width   : 100%;
+            height  : 100%;
+            margin  : 0;
+            padding : 0;
+        }
+
+        #renderCanvas {
+            width   : 100%;
+            height  : 100%;
+            touch-action: none;
+        }
+    </style>
+
+    <!-- for fun from playground -->
+    <!-- <style>[touch-action="none"]{ -ms-touch-action: none; touch-action: none; }
+    body /shadow-deep/ [touch-action="none"]{ -ms-touch-action: none; touch-action: none; }
+    [touch-action="auto"]{ -ms-touch-action: auto; touch-action: auto; }
+    body /shadow-deep/ [touch-action="auto"]{ -ms-touch-action: auto; touch-action: auto; }
+    [touch-action="pan-x"]{ -ms-touch-action: pan-x; touch-action: pan-x; }
+    body /shadow-deep/ [touch-action="pan-x"]{ -ms-touch-action: pan-x; touch-action: pan-x; }
+    [touch-action="pan-y"]{ -ms-touch-action: pan-y; touch-action: pan-y; }
+    body /shadow-deep/ [touch-action="pan-y"]{ -ms-touch-action: pan-y; touch-action: pan-y; }
+    [touch-action="pan-x pan-y"],[touch-action="pan-y pan-x"]{ -ms-touch-action: pan-x pan-y; touch-action: pan-x pan-y; }
+    body /shadow-deep/ [touch-action="pan-x pan-y"],body /shadow-deep/ [touch-action="pan-y pan-x"]{ -ms-touch-action: pan-x pan-y; touch-action: pan-x pan-y; }
+    </style> -->
+
+</head>
+<body>
+
+    <!-- TEST: touch-action none OR not -->
+    <canvas id="renderCanvas" touch-action:"none"></canvas>
+    <!-- <canvas id="renderCanvas"></canvas> -->
+
+    <script>
+        window.addEventListener('DOMContentLoaded', function(){
+            var canvas = document.getElementById('renderCanvas');
+            var engine = new BABYLON.Engine(canvas, true);
+
+            var createScene = function() {
+                var scene = new BABYLON.Scene(engine);
+                var camera = new BABYLON.ArcRotateCamera("Camera", 0, Math.PI / 3, 12, BABYLON.Vector3.Zero(), scene);
+                camera.attachControl(canvas, true);
+
+                    //STEPS to reproduce TOUCH-OFFSET-BEHAVIOR:
+                    //1. Open in chrome emulator (any) OR PIXEL PHONE (as is my case).
+                    //2. touch tile, RESULT: no console.log message.
+                    //3. touch OFF of the tiles, to the LOWER-RIGHT. RESULT console.log fires. Pointer is detecting tile (at offset) from up and left or lower right touch.
+                    //CONCLUSION: touch works fine on laptop, when using chrome emulator... touch is offset.
+
+                    //TEST: resetting PIXEL-RATIO-. //RESULT - no change-.
+                    console.log('SCALING: '+ engine.getHardwareScalingLevel())
+                    console.log('WIN-SCALING: '+ window.devicePixelRatio)
+                    engine.setHardwareScalingLevel(window.devicePixelRatio)
+                    console.log('NEW-SCALING: '+ engine.getHardwareScalingLevel())
+
+                    /***********************************CREATE_TILES************************************/
+                    var centerTiles = [];
+                    function createCenterTiles(){
+                        var centerTilePositions = [{x:5,z:5},{x:-5,z:5},{x:5,z:-5},{x:-5,z:-5} ];
+                        for (var i=0;i<centerTilePositions.length;i++) {
+                            var centerTile = BABYLON.MeshBuilder.CreateBox("centerTile"+i, {width:10,height:1,depth:10}, scene);
+                            var centerTileMat = new BABYLON.StandardMaterial("ground", scene);
+                            if(i===0){
+                                centerTileMat.diffuseColor = new BABYLON.Color3(0.85, 0.75, 0.75);
+                                centerTileMat.specularColor = new BABYLON.Color3(0.8, 0.4, 0.4);
+
+                            } else if (i===1){
+                                centerTileMat.diffuseColor = new BABYLON.Color3(0.75, 0.85, 0.75);
+                                centerTileMat.specularColor = new BABYLON.Color3(0.4, 0.7, 0.4);
+                                
+                            } else if (i===2){
+                                centerTileMat.diffuseColor = new BABYLON.Color3(0.75, 0.75, 0.85);
+                                centerTileMat.specularColor = new BABYLON.Color3(0.4, 0.4, 1);
+                                
+                            } else if (i===3){
+                                centerTileMat.diffuseColor = new BABYLON.Color3(0.85, 0.75, 0.85);
+                                centerTileMat.specularColor = new BABYLON.Color3(0.6, 0.4, 0.6);
+                            }
+
+                            centerTile.material = centerTileMat;
+                            centerTile.position.y = 1;
+                            centerTile.position.x = centerTilePositions[i].x;
+                            centerTile.position.z = centerTilePositions[i].z;
+                            centerTiles.push(centerTile)
+
+                        }
+
+                        /*********************EVENTS************************************************/
+                        scene.onPointerObservable.add(function(e){
+                            console.log('movin')
+                        },BABYLON.PointerEventTypes.POINTERMOVE);
+                        // ----------------------------------------------------Register Pointer Events.
+                        var meshes = centerTiles; 
+                        for(var i = 0; i < meshes.length; i++){
+                            mesh = meshes[i];
+                            mesh.actionManager = new BABYLON.ActionManager(scene);
+                            // trigger actions
+                            mesh.actionManager.registerAction(
+                                new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickDownTrigger, function(e){
+                                    console.log('DOWN'+ e.source.id)
+                                })
+                            );
+                            mesh.actionManager.registerAction(
+                                new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickUpTrigger, function(e){
+                                    console.log('UP'+ e.source.id)
+                                })
+                            );
+                        }
+                        
+                    } //END-create-tiles-.
+
+
+                    /*********************************CREATE-LIGHTS******************************/
+                    var spot1, light1, light2;
+                    var createLights = function() {
+                        var light = new BABYLON.HemisphericLight('light1', new BABYLON.Vector3(0,10,0), scene);
+                        light.intensity = 0.4;
+
+                        light1 = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(-1, -2, -1), scene);
+                        light1.position = new BABYLON.Vector3(20, 39, 20);
+                        light1.intensity = 0.5;
+
+                        // light2
+                        light2 = new BABYLON.SpotLight("spot02", new BABYLON.Vector3(0, 40, 20), new BABYLON.Vector3(-1, -2, -1), 1.1, 16, scene);
+                        light2.intensity = 0.5;
+                    }
+
+
+                    createLights();
+                    createCenterTiles();
+
+
+                return scene;
+            };
+
+            /******************************Initialization******************************/
+            var scene = createScene();
+            // scene.clearColor = new BABYLON.Color3(.33,.44,.55);
+
+            engine.runRenderLoop(function(){
+                scene.render();
+            });
+
+            window.addEventListener('resize', function(){
+                engine.resize();
+            });
+        });
+    </script>
+</body>
+</html>
