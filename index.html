@@ -116,6 +116,7 @@
                             mesh.actionManager.registerAction(
                                 new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickDownTrigger, function(e){
                                     console.log('DOWN'+ e.source.id)
+                                    document.getElementById('dataNum').innerText = e.source.id;
                                 })
                             );
                             mesh.actionManager.registerAction(
@@ -164,5 +165,6 @@
             });
         });
     </script>
+    <footer id=dataNum style="position:fixed; bottom:10%; left:10%; background-color:silver; border: 2px solid steelblue; border-radius: 30% padding:3px;">0</footer>
 </body>
 </html>
